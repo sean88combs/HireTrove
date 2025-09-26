@@ -1,0 +1,162 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+
+enum Role {
+  RECRUITER
+  ADMIN
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  password_hash String
+  role          Role     @default(RECRUITER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  planId   String?
+  plan     Plan?     @relation(fields: [planId], references: [id])
+  usage    UserUsage?
+  auditLogs AuditLog[]
+  jobs     Job[]
+  schedules Schedule[]    // <-- Add this
+}
+
+model Company {
+  id            String   @id @default(cuid())
+  name          String
+  employeeCount Int
+  createdAt     DateTime @default(now())
+
+  users User[]
+  jobs  Job[]
+}
+
+model Plan {
+  id                   String      @id @default(cuid())
+  name                 String      @unique
+  price                Int
+  ai_calls_included    Int
+  job_limit            Int
+  resume_storage_limit Int
+  features             Json
+
+  users  User[]
+  usage  UserUsage[]   @relation("PlanUsage")   // named relation
+}
+
+model UserUsage {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  planId         String?
+  ai_calls_used  Int      @default(0)
+  resumes_scored Int      @default(0)
+  billing_cycle  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan? @relation("PlanUsage", fields: [planId], references: [id])
+}
+
+model Job {
+  id          String           @id @default(cuid())
+  title       String
+  description String
+  location    String?
+  createdAt   DateTime @default(now())
+
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyId String?
+  company   Company?  @relation(fields: [companyId], references: [id])
+
+  candidates       Candidate[]
+  compliance       ComplianceLog[]
+  interviewGuides  InterviewGuide[]   // <-- Add this
+}
+
+model Candidate {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  resumeUrl String?
+  appliedAt DateTime @default(now())
+
+  jobId  String
+  job    Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  resumeScores ResumeScore[]
+}
+
+model ResumeScore {
+  id          String   @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  score       Int
+  createdAt   DateTime @default(now())
+}
+
+model InterviewGuide {
+  id        String   @id @default(cuid())
+  jobId     String
+  questions Json
+  createdAt DateTime @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model Template {
+  id        String   @id @default(cuid())
+  name      String
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Schedule {
+  id        String   @id @default(cuid())
+  userId    String
+  eventDate DateTime
+  details   String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ComplianceLog {
+  id        String   @id @default(cuid())
+  jobId     String
+  issues    Json
+  createdAt DateTime @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  timestamp DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GuestLog {
+  id        String   @id @default(cuid())
+  ipAddress String
+  action    String
+  createdAt DateTime @default(now())
+}
+
