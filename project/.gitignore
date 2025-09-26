@@ -34,3 +34,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local Bolt files
+.bolt/
+
+# Environment files
+.env
+.env.local
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
